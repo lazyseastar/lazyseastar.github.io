@@ -1,0 +1,542 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title></title>
+    <style>
+        body {
+            margin: 0;
+            -webkit-user-select: none;
+            user-select: none;
+            cursor: default;
+            font-family: Helvetica, Tahoma, Arial, STXihei, "华文细黑", "Microsoft YaHei", "微软雅黑", sans-serif;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        #menu {
+            height: 5vh;
+            line-height: 5vh;
+            font-size: 2.5vh;
+            text-align: center;
+            background-color: #7bbfea;
+        }
+
+        .item {
+            float: left;
+            width: 5vw;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div id="menu">
+        <div class="item" id="disrupt">打乱</div>
+        <div class="item" id="solve">还原</div>
+        <div class="item" id="save">保存</div>
+        <div class="item" id="load">载入</div>
+    </div>
+    <div id="wrapper"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r69/three.min.js"></script>
+    <script src="OrbitControls.js"></script>
+    <script src="tween.min.js"></script>
+    <script>
+        (function () {
+            "use strict";
+            var wait = {
+                i: 0,
+                l: 0,
+                then: null,
+                resolve: function () {
+                    this.i++;
+                    if (this.i === this.l) {
+                        this.then();
+                    }
+                }
+            };
+            var imgs = [];
+            wait.then = function () {
+                var w, h;
+                setWH();
+                var renderer = new THREE.WebGLRenderer({ antialias: true });
+                renderer.setSize(w, h);
+                renderer.setClearColor(0xffffff);
+                var view = renderer.domElement;
+                wrapper.appendChild(view);
+                var scene = new THREE.Scene();
+                var camera = new THREE.PerspectiveCamera(30, w / h, 0.1, 100);
+                camera.up.set(0, 0, 1);
+                camera.position.set(8, -8, 8);
+                camera.lookAt(scene.position);
+                var controls = new THREE.OrbitControls(camera);
+                controls.noKeys = true;
+                controls.noPan = true;
+                controls.noZoom = true;
+                var cubes = new THREE.Group();
+                scene.add(cubes);
+                (function () {
+                    var array = [];
+                    (function () {
+                        var anisotropy = Math.min(8, renderer.getMaxAnisotropy());
+                        for (var i = 0; i < 6; i++) {
+                            var texture = new THREE.Texture(imgs[i]);
+                            texture.anisotropy = anisotropy;
+                            texture.needsUpdate = true;
+                            array.push(new THREE.MeshBasicMaterial({ map: texture }));
+                        }
+                    })();
+                    var geometry = new THREE.BoxGeometry(1, 1, 1);
+                    var black = new THREE.MeshBasicMaterial({ color: 0x000000 });
+                    var white = array[0];
+                    var yellow = array[1];
+                    var red = array[2];
+                    var orange = array[3];
+                    var blue = array[4];
+                    var green = array[5];
+                    var i = 0;
+                    for (var z = -1; z < 2; z++) {
+                        for (var y = -1; y < 2; y++) {
+                            for (var x = -1; x < 2; x++) {
+                                var materials = [];
+                                if (x === 1) {
+                                    materials.push(green);
+                                }
+                                else {
+                                    materials.push(black);
+                                }
+                                if (x === -1) {
+                                    materials.push(blue);
+                                }
+                                else {
+                                    materials.push(black);
+                                }
+                                if (y === 1) {
+                                    materials.push(red);
+                                }
+                                else {
+                                    materials.push(black);
+                                }
+                                if (y === -1) {
+                                    materials.push(orange);
+                                }
+                                else {
+                                    materials.push(black);
+                                }
+                                if (z === 1) {
+                                    materials.push(white);
+                                }
+                                else {
+                                    materials.push(black);
+                                }
+                                if (z === -1) {
+                                    materials.push(yellow);
+                                }
+                                else {
+                                    materials.push(black);
+                                }
+                                var cube = new THREE.Mesh(geometry, new THREE.MeshFaceMaterial(materials));
+                                cube.position.set(x, y, z);
+                                var name = {
+                                    x: x,
+                                    y: y,
+                                    z: z,
+                                    i: i
+                                }
+                                cube.name = JSON.stringify(name);
+                                i++;
+                                cubes.add(cube);
+                            }
+                        }
+                    }
+                })();
+                (function () {
+                    onresize = throttle(function () {
+                        setWH();
+                        camera.aspect = w / h;
+                        camera.updateProjectionMatrix();
+                        renderer.setSize(w, h);
+                    });
+                    var b = {
+                        enable: true,
+                        first: true,
+                        x: true
+                    };
+                    var di = 0;
+                    var xyz = "x";
+                    var factor = 1;
+                    var precision = 0.0001;
+                    var layer, plane;
+                    var pos;
+                    var down = function (e) {
+                        if (b.enable) {
+                            e.preventDefault();
+                            var list = caster(e).intersectObjects(cubes.children);
+                            if (list.length > 0) {
+                                controls.enabled = false;
+                                var first = list[0];
+                                pos = first.object.position;
+                                var p = first.point;
+                                var normal = new THREE.Vector3();
+                                if (eq(p.x, 1.5)) {
+                                    normal.x = 1;
+                                }
+                                else if (eq(p.x, -1.5)) {
+                                    normal.x = -1;
+                                }
+                                else if (eq(p.y, 1.5)) {
+                                    normal.y = 1;
+                                }
+                                else if (eq(p.y, -1.5)) {
+                                    normal.y = -1;
+                                }
+                                else if (eq(p.z, 1.5)) {
+                                    normal.z = 1;
+                                }
+                                else if (eq(p.z, -1.5)) {
+                                    normal.z = -1;
+                                }
+                                var geometry = new THREE.PlaneBufferGeometry(100, 100);
+                                var material = new THREE.MeshBasicMaterial();
+                                plane = new THREE.Mesh(geometry, material);
+                                plane.up.set(0, 0, 1);
+                                plane.lookAt(normal);
+                                plane.position.copy(p);
+                                scene.add(plane);
+                                plane.visible = false;
+                            }
+                        }
+                    };
+                    var move = throttle(function (e) {
+                        if (b.enable) {
+                            if (plane) {
+                                var list = caster(e).intersectObject(plane);
+                                if (list.length > 0) {
+                                    var first = list[0];
+                                    var point = plane.worldToLocal(first.point);
+                                    var vec = new THREE.Vector2(point.x, point.y);
+                                    if (b.first) {
+                                        var length = vec.length();
+                                        if (length > 0.1) {
+                                            b.first = false;
+                                            var rad = Math.acos(vec.x / vec.length());
+                                            var deg = THREE.Math.radToDeg(rad);
+                                            if (deg < 45 || deg > 135) {
+                                                b.x = true;
+                                            }
+                                            else {
+                                                b.x = false;
+                                            }
+                                            group();
+                                        }
+                                    }
+                                    else {
+                                        layer.rotation[xyz] = (b.x ? vec.x : vec.y) * factor;
+                                    }
+                                }
+                            }
+                        }
+                    });
+                    var up = function (e) {
+                        if (b.enable) {
+                            e.preventDefault();
+                            if (plane) {
+                                layerToScene();
+                                scene.remove(plane);
+                                controls.enabled = true;
+                                plane = null;
+                                b.first = true;
+                            }
+                        }
+                    };
+                    view.addEventListener("mousedown", down);
+                    view.addEventListener("mousemove", move);
+                    view.addEventListener("mouseup", up);
+                    view.addEventListener("mouseout", up);
+                    menu.onmousedown = function (e) {
+                        if (b.enable) {
+                            var t = e.target;
+                            if (t.className === "item") {
+                                t.style.backgroundColor = "white";
+                            }
+                        }
+                    };
+                    menu.onmouseup = menu.onmouseout = function (e) {
+                        if (b.enable) {
+                            var t = e.target;
+                            if (t.className === "item") {
+                                t.style.backgroundColor = "#7bbfea";
+                            }
+                        }
+                    };
+                    disrupt.onclick = function () {
+                        if (b.enable) {
+                            disruptCube();
+                        }
+                    };
+                    solve.onclick = function () {
+                        if (b.enable) {
+                            cubes.children.forEach(function (cube) {
+                                var name = JSON.parse(cube.name);
+                                cube.position.set(name.x, name.y, name.z);
+                                cube.rotation.set(0, 0, 0);
+                            });
+                        }
+                    };
+                    save.onclick = function () {
+                        if (b.enable) {
+                            cubes.children.sort(compare);
+                            var cubesData = [];
+                            cubes.children.forEach(function (cube) {
+                                var item = {};
+                                item.px = cube.position.x;
+                                item.py = cube.position.y;
+                                item.pz = cube.position.z;
+                                item.rx = cube.rotation.x;
+                                item.ry = cube.rotation.y;
+                                item.rz = cube.rotation.z;
+                                cubesData.push(item);
+                            });
+                            localStorage.cubesData = JSON.stringify(cubesData);
+                            alert("保存成功");
+                        }
+                    };
+                    load.onclick = function () {
+                        if (b.enable) {
+                            if (localStorage.cubesData) {
+                                cubes.children.sort(compare);
+                                var cubesData = JSON.parse(localStorage.cubesData);
+                                cubesData.forEach(function (item, i) {
+                                    var cube = cubes.children[i];
+                                    cube.position.set(item.px, item.py, item.pz);
+                                    cube.rotation.set(item.rx, item.ry, item.rz);
+                                });
+                            }
+                            else {
+                                alert("未找到存档");
+                            }
+                        }
+                    };
+                    function throttle(fn) {
+                        var id;
+                        return function () {
+                            var ctx = this, args = arguments;
+                            cancelAnimationFrame(id);
+                            id = requestAnimationFrame(function () {
+                                fn.apply(ctx, args);
+                                id = null;
+                            });
+                        };
+                    }
+                    function caster(e) {
+                        var mouse = new THREE.Vector2();
+                        var rect = wrapper.getBoundingClientRect();
+                        var left = rect.left;
+                        var top = rect.top;
+                        mouse.x = ((e.clientX - left) / w) * 2 - 1;
+                        mouse.y = -((e.clientY - top) / h) * 2 + 1;
+                        var vector = new THREE.Vector3(mouse.x, mouse.y, 0.5).unproject(camera);
+                        return new THREE.Raycaster(camera.position, vector.sub(camera.position).normalize());
+                    }
+                    function eq(a, b) {
+                        if (Math.abs(a - b) < precision) {
+                            return true;
+                        }
+                        return false;
+                    }
+                    function group() {
+                        layer = new THREE.Group();
+                        scene.add(layer);
+                        var p = plane.position;
+                        if (b.x) {
+                            if (eq(p.z, 1.5)) {
+                                cubesToLayer("x", -1);
+                            }
+                            else if (eq(p.z, -1.5)) {
+                                cubesToLayer("x", 1);
+                            }
+                            else {
+                                cubesToLayer("z", 1);
+                            }
+                        }
+                        else {
+                            if (eq(p.x, 1.5)) {
+                                cubesToLayer("y", -1);
+                            }
+                            else if (eq(p.x, -1.5)) {
+                                cubesToLayer("y", 1);
+                            }
+                            else if (eq(p.y, 1.5)) {
+                                cubesToLayer("x", 1);
+                            }
+                            else if (eq(p.y, -1.5)) {
+                                cubesToLayer("x", -1);
+                            }
+                            else if (eq(p.z, 1.5)) {
+                                cubesToLayer("y", -1);
+                            }
+                            else if (eq(p.z, -1.5)) {
+                                cubesToLayer("y", -1);
+                            }
+                        }
+                    }
+                    function cubesToLayer(p, f) {
+                        var x = pos[p];
+                        addToLayer(p, x);
+                        xyz = p;
+                        factor = f;
+                    }
+                    function addToLayer(p, x) {
+                        var n = 0;
+                        for (var i = 0; i < cubes.children.length; i++) {
+                            var obj = cubes.children[i];
+                            if (eq(obj.position[p], x)) {
+                                layer.add(obj);
+                                i--;
+                                if (++n === 9) {
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    function layerToScene() {
+                        if (layer) {
+                            b.enable = false;
+                            var r0 = layer.rotation[xyz];
+                            var n = r0 / (Math.PI / 2);
+                            n = Math.round(n);
+                            var r1 = Math.PI / 2 * n;
+                            var tween = new TWEEN.Tween({ x: r0 })
+                                .to({ x: r1 }, Math.abs(r1 - r0) * 500)
+                                .onUpdate(function () {
+                                    layer.rotation[xyz] = this.x;
+                                })
+                                .onComplete(function () {
+                                    requestAnimationFrame(function () {
+                                        addToCubes();
+                                        scene.remove(layer);
+                                        layer = null;
+                                        b.enable = true;
+                                    });
+                                }).start();
+                        }
+                    }
+                    function addToCubes() {
+                        for (var i = 0; i < 9; i++) {
+                            var cube = layer.children[0];
+                            var position = cube.getWorldPosition().clone();
+                            var quaternion = cube.getWorldQuaternion().clone();
+                            cubes.add(cube);
+                            cube.position.copy(position);
+                            cube.position.x = Math.round(cube.position.x);
+                            cube.position.y = Math.round(cube.position.y);
+                            cube.position.z = Math.round(cube.position.z);
+                            cube.quaternion.copy(quaternion);
+                            var q = cube.quaternion;
+                            if (eq(q.x, 0)) q.x = 0;
+                            if (eq(q.y, 0)) q.y = 0;
+                            if (eq(q.z, 0)) q.z = 0;
+                            if (eq(q.w, 0)) q.w = 0;
+                        }
+                    }
+                    function random() {
+                        var r = Math.random();
+                        var length = arguments.length;
+                        for (var i = 0; i < length; i++) {
+                            if (r < (i + 1) / length) {
+                                break;
+                            }
+                        }
+                        return arguments[i];
+                    }
+                    function disruptCube() {
+                        b.enable = false;
+                        var p = random("x", "y", "z");
+                        var f = random(-1, 1);
+                        var x = random(-1, 0, 1);
+                        layer = new THREE.Group();
+                        scene.add(layer);
+                        addToLayer(p, x);
+                        var tween = new TWEEN.Tween({ x: 0 })
+                            .to({ x: Math.PI / 2 * f }, 100)
+                            .onUpdate(function () {
+                                layer.rotation[p] = this.x;
+                            })
+                            .onComplete(function () {
+                                requestAnimationFrame(function () {
+                                    addToCubes();
+                                    scene.remove(layer);
+                                    layer = null;
+                                    di++;
+                                    if (di < 100) {
+                                        disruptCube();
+                                    }
+                                    else {
+                                        b.enable = true;
+                                        di = 0;
+                                    }
+                                });
+                            }).start();
+                    }
+                    function compare(c1, c2) {
+                        var i1 = JSON.parse(c1.name).i;
+                        var i2 = JSON.parse(c2.name).i;
+                        return i1 - i2;
+                    }
+                })();
+                render();
+                function render() {
+                    requestAnimationFrame(render);
+                    TWEEN.update();
+                    controls.update();
+                    renderer.render(scene, camera);
+                }
+                function setWH() {
+                    w = innerWidth;
+                    h = Math.floor(innerHeight * 0.95);
+                }
+            };
+            (function () {
+                var colors = ["white", "yellow", "red", "#f60", "blue", "green"];
+                var canvas = document.createElement("canvas");
+                var s = 128;
+                canvas.width = s;
+                canvas.height = s;
+                var ctx = canvas.getContext("2d");
+                var w = 4;
+                var r = 4;
+                var a = w + r;
+                var b = s - w;
+                var c = s - a;
+                wait.l = 6;
+                for (var i = 0; i < 6; i++) {
+                    ctx.fillStyle = "black";
+                    ctx.fillRect(0, 0, s, s);
+                    ctx.beginPath();
+                    ctx.fillStyle = colors[i];
+                    ctx.moveTo(a, w);
+                    ctx.lineTo(c, w);
+                    ctx.arcTo(b, w, b, a, r);
+                    ctx.lineTo(b, c);
+                    ctx.arcTo(b, b, c, b, r);
+                    ctx.lineTo(a, b);
+                    ctx.arcTo(w, b, w, c, r);
+                    ctx.lineTo(w, a);
+                    ctx.arcTo(w, w, a, w, r);
+                    ctx.fill();
+                    (function () {
+                        var imgUrl = canvas.toDataURL();
+                        var img = new Image();
+                        img.onload = function () {
+                            imgs.push(img);
+                            wait.resolve();
+                        };
+                        img.src = imgUrl;
+                    })();
+                }
+            })();
+        })();
+    </script>
+</body>
+</html>
