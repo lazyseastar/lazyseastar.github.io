@@ -1,0 +1,57 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title></title>
+    <link rel="stylesheet" href="index.css" />
+</head>
+<body>
+    <div id="gameState">
+        <div id="foeNumDiv">敌机数量：<span id="foeNum">4</span> / 4</div>
+        <div id="victory">胜利</div>
+    </div>
+    <div id="instructions">
+        <div id="start">开始游戏</div>
+        <div>击毁所有敌机 = 胜利</div>
+        <div>W, S, A, D或上下左右 = 移动, 空格 = 射击</div>
+    </div>
+    <div id="loading">
+        <div id="loadingAnimation">
+            <div>
+                <div>
+                    <div>
+                        <div>
+                            <div>
+                                <div>
+                                    <div>
+                                        <div>
+                                            <div>
+                                                <div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="progress"></div>
+        <div>
+            <div id="loadingText">正在加载共10M的3D模型和纹理</div>
+        </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r71/three.min.js"></script>
+    <script src="lib/MTLLoader.js"></script>
+    <script src="lib/OBJMTLLoader.js"></script>
+    <script src="lib/ShaderParticles.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
+    <script src="js/eventManager.js"></script>
+    <script src="js/ani.js"></script>
+    <script src="js/transit.js"></script>
+    <script src="js/ring.js"></script>
+    <script src="index.js"></script>
+</body>
+</html>
