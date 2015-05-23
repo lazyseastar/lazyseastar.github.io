@@ -40,8 +40,8 @@ document.addEventListener("DOMContentLoaded", function () {
             manager.itemStart(key);
             THREE.ImageUtils.loadTexture(url, undefined, function (texture) {
                 asset[key] = texture;
+                manager.itemEnd(key);
             });
-            manager.itemEnd(key);
         }
         function callback(loaded, total) {
             if (loaded === total) {
